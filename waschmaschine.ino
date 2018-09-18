@@ -148,13 +148,24 @@ void info (int integer)
 	}
 }
 
-///**
-// * returns the position of the current program in the array
-// */
-//int getCurrentProgramArrayId()
-//{
-//	return programArray[currentProgramArrayId];
-//}
+/**
+ * calculate remaining times
+ */
+void calculateRemainingTimes()
+{
+	if (currentProgram.getMode() == WASHING)
+	{
+		programWashingTimeLeft = currentProgram.getRemainingTimeInSeconds();
+	}
+	else if (currentProgram.getMode() == FLUSHING)
+	{
+		programFlushingTimeLeft = currentProgram.getRemainingTimeInSeconds();
+	}
+	else if (currentProgram.getMode() == SPINNING)
+	{
+		programSpinningTimeLeft = currentProgram.getRemainingTimeInSeconds();
+	}
+}
 
 /**
  * gets the position of the ProgramChooserButton and programs the washing programs.
@@ -234,9 +245,11 @@ void chooseWashingProgram (int temperature)
 {
 
 	debug ("\nsetting WASHING program");
-	long targetDuration = PROGRAM_WASHING_DEFAULT_TIME -15 + temperature / 2 *1000;
+	long targetDuration = PROGRAM_WASHING_DEFAULT_TIME -15 + temperature / 2;
 	debug ("\ntemperature=");
 	debug (temperature);
+	debug ("\nduration=");
+	debug (targetDuration);
 	currentProgram.setDuration(targetDuration);
 	currentProgram.setMode(WASHING);
 	programWashingNeedsToRun  = true;
@@ -288,7 +301,7 @@ void chooseSpinningProgram ()
 /**
  * reset all values. PowerOff will be implemented later
  */
-void chooseOffProgram()
+void chooseEndProgram()
 {
 	debug ("\nsetting OFF program");
 	programWashingNeedsToRun = false;
@@ -297,6 +310,15 @@ void chooseOffProgram()
 	programWashingTimeLeft  = 0;
 	programFlushingTimeLeft = 0;
 	programSpinningTimeLeft = 0;
+	isProgramRunning = false;
+}
+
+/**
+ * Poweroff
+ */
+void chooseOffProgram()
+{
+	// will be implemented later as soon as the power circuit is working.
 }
 
 /**
@@ -327,10 +349,46 @@ void configureProgram()
 	{
 		chooseOffProgram();
 	}
-
-
 }
 
+/**
+ * switches to the next program part and starts it
+ */
+void switchToNextProgram()
+{
+	if (currentProgram.getMode() == WASHING)
+	{
+		programWashingNeedsToRun = false;
+		if (programFlushingNeedsToRun)
+		{
+			chooseFlushingProgram();
+		}
+		else if (programSpinningNeedsToRun)
+		{
+			chooseSpinningProgram();
+		}
+		else
+		{
+			chooseEndProgram();
+		}
+	}
+	else if (currentProgram.getMode() == FLUSHING)
+	{
+		 if (programSpinningNeedsToRun)
+		{
+			chooseSpinningProgram();
+		}
+		else
+		{
+			chooseEndProgram();
+		}
+	}
+	else if (currentProgram.getMode() == SPINNING)
+	{
+		chooseEndProgram();
+	}
+
+}
 
 void setup()
 {
@@ -397,8 +455,15 @@ void setup()
 void loop()
 {
 
+
 	debug("\n\ntime: ");
 	debug((long) millis());
+
+
+	// process the timer
+	currentProgram.Timer();
+	currentProgram.debugTimer();
+	calculateRemainingTimes();
 
 	// update status of push Buttons
 	startButton.processButtonState();
@@ -466,6 +531,13 @@ void loop()
 
 			// a program is running
 			// -> check counter if we need to go over to the next program part
+
+			if (currentProgram.getRemainingTimeInSeconds() == 0)
+			{
+				// stop current program, because it has been finished
+				currentProgram.end();
+				switchToNextProgram();
+			}
 
 		}
 		else
