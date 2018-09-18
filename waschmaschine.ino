@@ -49,6 +49,7 @@ int PROGRAM_OFF_ID = -1;
 int programWashingIdMin=0;
 int programWashingIdMax=4;
 
+int segmentDisplayIlluminationDelay=25;
 
 
 
@@ -239,6 +240,50 @@ bool isDoorOpen()
 }
 
 /**
+ * returns the sum of all remaing times
+ */
+long getTotalRemainingTime()
+{
+	return programFlushingTimeLeft + programSpinningTimeLeft + programWashingTimeLeft;
+}
+
+
+/**
+ * returns the minor second digit
+ */
+int getSecondsDigit0(int time)
+{
+	return time %60 % 10;
+}
+
+/**
+ * returns the major second digit
+ */
+int getSecondsDigit1(int time)
+{
+	return (int) time %60 / 10;
+}
+
+/**
+ * returns the minor minute digit
+ */
+int getMinutesDigit0(int time)
+{
+	return time/60 % 60;
+}
+
+/**
+ * returns the major minute digit
+ */
+int getMinutesDigit1(int time)
+{
+	return time/60 % 60 /10;
+}
+
+
+
+
+/**
  * set washing program (washing + flushing + spinning)
  */
 void chooseWashingProgram (int temperature)
@@ -350,6 +395,7 @@ void configureProgram()
 		chooseOffProgram();
 	}
 }
+
 
 /**
  * switches to the next program part and starts it
@@ -506,8 +552,20 @@ void loop()
 	debug ((long) programFlushingTimeLeft);
 	debug (" spinning: ");
 	debug ((long) programSpinningTimeLeft);
+	debug (" total: ");
+	debug ((long) getTotalRemainingTime());
 
 
+
+	// print total remaining time to 7 segment display
+	myDisplay.writeCharToDigit(0, getSecondsDigit0(getTotalRemainingTime()));
+	delay (segmentDisplayIlluminationDelay);
+	myDisplay.writeCharToDigit(1, getSecondsDigit1(getTotalRemainingTime()));
+	delay (segmentDisplayIlluminationDelay);
+	myDisplay.writeCharToDigit(2, getMinutesDigit0(getTotalRemainingTime()));
+	delay (segmentDisplayIlluminationDelay);
+	myDisplay.writeCharToDigit(3, getMinutesDigit1(getTotalRemainingTime()));
+	delay (segmentDisplayIlluminationDelay);
 
 
 	// always check first, if the door is open. If it is open, set the motor to standby
@@ -565,16 +623,5 @@ void loop()
 		}
 	}
 	delay(750);
-
-
-
 	lastProgramId = currentProgramId;
-
-
-
-
-
-
-
-
 }
